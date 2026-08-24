@@ -2,7 +2,7 @@
 	<div class="flex items-center justify-between gap-1">
 		<div>
 			<h3 class="text-base font-medium">{{ props.actionLabel }}</h3>
-			<p class="mt-1 text-p-base text-gray-600">{{ props.description }}</p>
+			<p class="mt-1 text-p-base text-ink-gray-6">{{ props.description }}</p>
 		</div>
 		<Button
 			v-if="server?.doc"
@@ -11,7 +11,7 @@
 		>
 			<p
 				:class="
-					group === 'Dangerous Actions' ? 'text-red-600' : 'text-gray-800'
+					group === 'Dangerous Actions' ? 'text-red-600' : 'text-ink-gray-8'
 				"
 			>
 				{{ props.buttonLabel }}
@@ -22,7 +22,7 @@
 
 <script setup>
 import { createDocumentResource, getCachedDocumentResource } from 'frappe-ui';
-import { h } from 'vue';
+import { h, onMounted } from 'vue';
 import { toast } from 'vue-sonner';
 import router from '../../router';
 import { confirmDialog, renderDialog } from '../../utils/components';
@@ -32,6 +32,8 @@ import CleanupDialog from './CleanupDialog.vue';
 import DatabaseBinlogsDialog from './DatabaseBinlogsDialog.vue';
 import DatabaseConfigurationDialog from './DatabaseConfigurationDialog.vue';
 import SecondaryServerPlanDialog from './SecondaryServerPlanDialog.vue';
+import OnPremFailoverDialog from './OnPremFailoverDialog.vue';
+import { useRoute } from 'vue-router';
 
 const props = defineProps({
 	serverName: { type: String, required: true },
@@ -44,6 +46,14 @@ const props = defineProps({
 });
 
 const server = getCachedDocumentResource(props.serverType, props.serverName);
+const route = useRoute();
+
+onMounted(() => {
+	const queryAction = route.query['action'];
+	if (props.actionLabel === queryAction) {
+		getServerActionHandler(queryAction);
+	}
+});
 
 function getServerActionHandler(action) {
 	const actionHandlers = {
@@ -62,8 +72,10 @@ function getServerActionHandler(action) {
 		'Update Max DB Connections': onUpdateMaxDBConnections,
 		'View Database Configuration': onViewDatabaseConfiguration,
 		'Update Binlog Retention': onUpdateBinlogRetention,
+		'Forcefully Purge Binlogs': onPurgeBinlogsForcefully,
 		'Update Binlog Size Limit': onUpdateBinlogSizeLimit,
 		'Manage Database Binlogs': onViewMariaDBBinlogs,
+		'Manage On-Prem Replication': onManageOnPremFailover,
 	};
 	if (actionHandlers[action]) {
 		actionHandlers[action].call(this);
@@ -100,7 +112,7 @@ function onTeardownSecondaryServer() {
 			while it is being removed.
 		</p>
 
-		<div class="mt-3 rounded-md bg-gray-50 border border-gray-200 p-3 text-sm">
+		<div class="mt-3 rounded-md bg-surface-gray-1 border border-outline-gray-1 p-3 text-sm">
 			<div class="p-2">
 				<p>
 					This action <strong>archives the secondary server instance and fully disables auto-scaling</strong> until a new secondary server is set up.
@@ -161,7 +173,7 @@ function onSetupSecondaryServer() {
 			number and size of the benches on the server.
 		</p>
 
-		<div class="mt-3 rounded-md bg-gray-50 border border-gray-200 text-sm">
+		<div class="mt-3 rounded-md bg-surface-gray-1 border border-outline-gray-1 text-sm">
 			<div class="p-2">
 				<p>
 					Select a <strong>secondary server plan</strong> — this is the plan the secondary server will run on.  
@@ -536,6 +548,46 @@ function onUpdateInnodbBufferPoolSize() {
 	});
 }
 
+function onPurgeBinlogsForcefully() {
+	if (!server.purgeBinlogsForcefully) return;
+	confirmDialog({
+		title: 'Forcefully Purge Binlogs',
+		message: `Are you sure you want to forcefully purge binlogs on the database server <b>${server.doc.name}</b>?<br><br>This action will reboot the database as well.`,
+		fields: [
+			{
+				label: 'Enter no of binlogs to delete',
+				fieldname: 'binlogsToDelete',
+				type: 'number',
+				default: 5,
+			},
+		],
+		primaryAction: {
+			label: 'Purge Binlogs',
+			theme: 'red',
+		},
+		onSuccess({ hide, values }) {
+			if (server.purgeBinlogsForcefully.loading) return;
+			toast.promise(
+				server.purgeBinlogsForcefully.submit(
+					{
+						no_of_binlogs: parseInt(values.binlogsToDelete),
+					},
+					{
+						onSuccess() {
+							hide();
+						},
+					},
+				),
+				{
+					loading: 'Purging binlogs...',
+					success: 'Binlogs purged successfully',
+					error: 'Failed to purge binlogs',
+				},
+			);
+		},
+	});
+}
+
 function onUpdateBinlogRetention() {
 	if (!server.updateBinlogRetention) return;
 	confirmDialog({
@@ -637,6 +689,14 @@ function onViewMariaDBBinlogs() {
 	renderDialog(
 		h(DatabaseBinlogsDialog, {
 			databaseServer: server.doc.name,
+		}),
+	);
+}
+
+function onManageOnPremFailover() {
+	renderDialog(
+		h(OnPremFailoverDialog, {
+			appServer: server.doc.name,
 		}),
 	);
 }

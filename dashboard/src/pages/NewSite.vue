@@ -7,18 +7,18 @@
 
 	<div
 		v-if="!$team.doc?.is_desk_user && !$session.hasSiteCreationAccess"
-		class="mx-auto mt-60 w-fit rounded border border-dashed px-12 py-8 text-center text-gray-600"
+		class="mx-auto mt-60 w-fit rounded border border-dashed px-12 py-8 text-center text-ink-gray-6"
 	>
 		<lucide-alert-triangle class="mx-auto mb-4 h-6 w-6 text-red-600" />
 		<ErrorMessage message="You aren't permitted to create new sites" />
 	</div>
 
 	<div v-else class="mx-auto max-w-2xl px-5">
-		<div v-if="$resources.options.loading" class="py-4 text-base text-gray-600">
+		<div v-if="$resources.options.loading" class="py-4 text-base text-ink-gray-6">
 			Loading...
 		</div>
 		<div v-if="$route.name === 'NewBenchSite' && !bench">
-			<div class="py-4 text-base text-gray-600">Something went wrong</div>
+			<div class="py-4 text-base text-ink-gray-6">Something went wrong</div>
 		</div>
 		<div v-else-if="options" class="space-y-12 pb-[50vh] pt-12">
 			<NewSiteAppSelector
@@ -28,7 +28,7 @@
 			/>
 			<div v-if="!bench">
 				<div class="flex items-center justify-between">
-					<h2 class="text-base font-medium leading-6 text-gray-900">
+					<h2 class="text-base font-medium leading-6 text-ink-gray-9">
 						Select Frappe Framework Version
 					</h2>
 				</div>
@@ -51,10 +51,10 @@
 							<button
 								:class="[
 									version === v.name
-										? 'border-gray-900 ring-1 ring-gray-900 hover:bg-gray-100'
-										: 'bg-white text-gray-900  hover:bg-gray-50',
+										? 'border-outline-gray-5 ring-1 ring-gray-900 hover:bg-surface-gray-2'
+										: 'bg-surface-white text-ink-gray-9  hover:bg-surface-gray-1',
 									v.disabled && 'opacity-50 hover:cursor-default',
-									'flex w-full cursor-pointer items-center justify-between rounded border border-gray-400 p-3 text-sm focus:outline-none',
+									'flex w-full cursor-pointer items-center justify-between rounded border border-outline-gray-3 p-3 text-sm focus:outline-none',
 								]"
 								@click="
 									() => {
@@ -71,9 +71,9 @@
 									<Tooltip
 										text="This version is under development and may have bugs. Do not use for production sites."
 									>
-										<lucide-info class="h-4 w-4 text-gray-500" />
+										<lucide-info class="h-4 w-4 text-ink-gray-5" />
 									</Tooltip>
-									<span class="ml-1 text-gray-600">
+									<span class="ml-1 text-ink-gray-6">
 										{{ v.status }}
 									</span>
 								</div>
@@ -92,7 +92,7 @@
 					<Tooltip
 						text="A local compliance app allows creating transactions as per statutory compliance. They're maintained by community partners."
 					>
-						<lucide-info class="h-4 w-4 text-gray-500" />
+						<lucide-info class="h-4 w-4 text-ink-gray-5" />
 					</Tooltip>
 				</div>
 				<FormControl
@@ -112,9 +112,8 @@
 			</div>
 			<div
 				v-if="
-					bench &&
-					(showDedicatedServerOption ||
-						dedicatedServerConfig?.case === 'dedicated_only_multiple')
+					showDedicatedServerOption ||
+					dedicatedServerConfig?.case === 'dedicated_only_multiple'
 				"
 				class="space-y-4"
 			>
@@ -125,7 +124,7 @@
 					label="Host this site on your dedicated server"
 				/>
 				<div v-if="shouldShowDedicatedServerDropdown">
-					<h2 class="text-base font-medium leading-6 text-gray-900 mb-2">
+					<h2 class="text-base font-medium leading-6 text-ink-gray-9 mb-2">
 						Select Dedicated Server
 					</h2>
 					<FormControl
@@ -150,7 +149,7 @@
 				"
 				class="flex flex-col"
 			>
-				<h2 class="text-base font-medium leading-6 text-gray-900">
+				<h2 class="text-base font-medium leading-6 text-ink-gray-9">
 					Select Provider
 				</h2>
 				<div class="mt-2 w-full space-y-2">
@@ -161,9 +160,9 @@
 							@click="provider = p.name"
 							:class="[
 								provider === p.name
-									? 'border-gray-900 ring-1 ring-gray-900 hover:bg-gray-100'
-									: 'border-gray-400 bg-white text-gray-900 ring-gray-200 hover:bg-gray-50',
-								'flex w-full items-center rounded-md border p-2 text-left text-base text-gray-900',
+									? 'border-outline-gray-5 ring-1 ring-gray-900 hover:bg-surface-gray-2'
+									: 'border-outline-gray-3 bg-surface-white text-ink-gray-9 ring-gray-200 hover:bg-surface-gray-1',
+								'flex w-full items-center rounded-md border p-2 text-left text-base text-ink-gray-9',
 							]"
 						>
 							<div class="flex w-full items-center justify-between">
@@ -191,7 +190,7 @@
 					(provider || bench)
 				"
 			>
-				<h2 class="text-base font-medium leading-6 text-gray-900">
+				<h2 class="text-base font-medium leading-6 text-ink-gray-9">
 					Select Region
 				</h2>
 				<div class="mt-2 w-full space-y-2">
@@ -202,9 +201,9 @@
 							@click="cluster = c.name"
 							:class="[
 								cluster === c.name
-									? 'border-gray-900 ring-1 ring-gray-900 hover:bg-gray-100'
-									: 'bg-white text-gray-900  hover:bg-gray-50',
-								'flex w-full items-center rounded border p-3 text-left text-base text-gray-900',
+									? 'border-outline-gray-5 ring-1 ring-gray-900 hover:bg-surface-gray-2'
+									: 'bg-surface-white text-ink-gray-9  hover:bg-surface-gray-1',
+								'flex w-full items-center rounded border p-3 text-left text-base text-ink-gray-9',
 							]"
 						>
 							<div class="flex w-full items-center justify-between">
@@ -222,13 +221,13 @@
 			</div>
 			<div v-if="selectedVersion && cluster">
 				<div class="flex items-center justify-between">
-					<h2 class="text-base font-medium leading-6 text-gray-900">
+					<h2 class="text-base font-medium leading-6 text-ink-gray-9">
 						Select Plan
 					</h2>
 					<div>
 						<Button link="https://frappecloud.com/pricing" variant="ghost">
 							<template #prefix>
-								<lucide-help-circle class="h-4 w-4 text-gray-700" />
+								<lucide-help-circle class="h-4 w-4 text-ink-gray-7" />
 							</template>
 							Help
 						</Button>
@@ -239,6 +238,7 @@
 						v-model="plan"
 						:isPrivateBenchSite="!!bench"
 						:isDedicatedServerSite="isDedicatedServerSite"
+						:serverPlanPrice="serverPriceUsd"
 						:selectedCluster="cluster"
 						:selectedApps="apps"
 						:selectedVersion="version"
@@ -246,7 +246,7 @@
 						:hideRestrictedPlans="selectedLocalisationCountry"
 					/>
 				</div>
-				<div v-if="isPrivateBenchPlan" class="mt-4 text-xs text-gray-700">
+				<div v-if="isPrivateBenchPlan" class="mt-4 text-xs text-ink-gray-7">
 					<div
 						class="flex items-center rounded bg-blue-50 p-2 text-p-base font-medium text-blue-800"
 					>
@@ -258,11 +258,14 @@
 						</span>
 					</div>
 				</div>
-				<div class="mt-4 text-xs text-gray-700">
+				<div
+					v-if="selectedPlanHasSupportIncluded"
+					class="mt-4 text-xs text-ink-gray-7"
+				>
 					<div
-						class="flex items-center rounded bg-gray-50 p-2 text-p-base font-medium text-gray-800"
+						class="flex items-center rounded bg-surface-gray-1 p-2 text-p-base font-medium text-ink-gray-8"
 					>
-						<lucide-badge-check class="h-4 w-8 text-gray-600" />
+						<lucide-badge-check class="h-4 w-8 text-ink-gray-6" />
 						<span class="ml-4">
 							<strong>Support</strong> covers only issues of Frappe apps and not
 							functional queries. You can raise a support ticket for Frappe
@@ -273,14 +276,14 @@
 			</div>
 			<div v-if="selectedVersion && plan && cluster">
 				<div class="flex justify-between items-center">
-					<h2 class="text-base font-medium leading-6 text-gray-900">
+					<h2 class="text-base font-medium leading-6 text-ink-gray-9">
 						Enter Subdomain
 					</h2>
 					<Tooltip
 						v-if="this.domain !== this.options.domain"
 						text="The root domain can change depending on the region you choose"
 					>
-						<lucide-help-circle class="h-4 w-4 text-gray-500" />
+						<lucide-help-circle class="h-4 w-4 text-ink-gray-5" />
 					</Tooltip>
 				</div>
 				<div class="mt-2 items-center">
@@ -290,7 +293,7 @@
 							placeholder="Subdomain"
 							v-model="subdomain"
 						/>
-						<div class="flex items-center rounded-r bg-gray-100 px-4 text-base">
+						<div class="flex items-center rounded-r bg-surface-gray-2 px-4 text-base">
 							.{{ domain }}
 						</div>
 					</div>
@@ -298,7 +301,7 @@
 				<div class="mt-1">
 					<div
 						v-if="$resources.subdomainExists.loading"
-						class="text-base text-gray-600"
+						class="text-base text-ink-gray-6"
 					>
 						Checking...
 					</div>
@@ -386,7 +389,7 @@ import { getCountry } from '../utils/country';
 
 export default {
 	name: 'NewSite',
-	props: ['bench'],
+	props: ['bench', 'server'],
 	components: {
 		FBreadcrumbs: Breadcrumbs,
 		NewSiteAppSelector,
@@ -419,11 +422,12 @@ export default {
 			agreedToRegionConsent: false,
 			useDedicatedServer: false,
 			selectedDedicatedServer: null,
+			serverPriceUsd: null,
 		};
 	},
 	watch: {
 		apps() {
-			if (!(this.bench && this.selectedDedicatedServer)) {
+			if (!this.selectedDedicatedServer) {
 				this.version = this.autoSelectVersion();
 				this.cluster = null;
 			}
@@ -446,15 +450,17 @@ export default {
 			}
 		},
 		version() {
-			this.cluster = null;
-			this.provider = null;
+			if (!this.selectedDedicatedServer) {
+				this.cluster = null;
+				this.provider = null;
+			}
 			this.agreedToRegionConsent = false;
 			// Reset localisation selection when version changes
 			this.selectedLocalisationCountry = null;
 			this.showLocalisationOption = false;
 		},
 		provider() {
-			if (this.bench) {
+			if (this.bench || this.selectedDedicatedServer) {
 				// provider is inferred from cluster selection, so avoid clearing it
 				return;
 			}
@@ -468,7 +474,7 @@ export default {
 			this.agreedToRegionConsent = false;
 
 			// For bench flow, set provider based on the selected cluster's cloud_provider
-			if (this.bench && this.cluster) {
+			if ((this.bench || this.selectedDedicatedServer) && this.cluster) {
 				const selectedCluster = this.selectedVersion?.group?.clusters.find(
 					(c) => c.name === this.cluster,
 				);
@@ -497,6 +503,7 @@ export default {
 			if (server) {
 				this.cluster = server.cluster;
 				this.provider = server.provider;
+				this.serverPriceUsd = server.price_usd;
 			}
 		},
 		subdomain: {
@@ -514,28 +521,14 @@ export default {
 			return {
 				url: 'press.api.site.options_for_new',
 				makeParams() {
-					return { for_bench: this.bench };
+					return { for_bench: this.bench, for_server: this.server };
 				},
 				onSuccess() {
 					this.closestCluster = this.options.closest_cluster;
 					if (this.bench && this.options.versions.length > 0) {
 						this.version = this.options.versions[0].name;
-
-						this.$nextTick(() => {
-							const config = this.dedicatedServerConfig;
-							if (!config || !config.dedicated_servers) return;
-
-							if (config.case === 'dedicated_only_single') {
-								this.useDedicatedServer = true;
-								const server = config.dedicated_servers[0];
-								this.cluster = server.cluster;
-								this.provider = server.provider;
-								this.selectedDedicatedServer = server.name;
-							} else if (config.case === 'dedicated_only_multiple') {
-								this.useDedicatedServer = true;
-							}
-						});
 					}
+					this.applyDedicatedServerDefaults();
 				},
 				auto: true,
 			};
@@ -644,6 +637,7 @@ export default {
 								share_details_consent: this.shareDetailsConsent,
 								selected_app_plans: appPlans,
 								domain: this.domain,
+								server: this.selectedDedicatedServer || null,
 								// files: this.selectedFiles,
 								// skip_failing_patches: this.skipFailingPatches,
 							},
@@ -692,8 +686,11 @@ export default {
 			return this.options?.versions.find((v) => v.name === this.version);
 		},
 		dedicatedServerConfig() {
-			if (!this.bench) return {};
-			return this.selectedVersion?.group?.dedicated_server_config || {};
+			if (this.bench) {
+				return this.selectedVersion?.group?.dedicated_server_config || {};
+			} else {
+				return this.options?.dedicated_server_config || {};
+			}
 		},
 		showDedicatedServerOption() {
 			const case_type = this.dedicatedServerConfig?.case || '';
@@ -703,7 +700,7 @@ export default {
 			);
 		},
 		isDedicatedServerSite() {
-			return this.useDedicatedServer && this.selectedDedicatedServer;
+			return !!(this.useDedicatedServer && this.selectedDedicatedServer);
 		},
 		availableDedicatedServers() {
 			return this.dedicatedServerConfig?.dedicated_servers || [];
@@ -713,7 +710,7 @@ export default {
 			const hasMultipleServers = this.availableDedicatedServers.length > 1;
 			// Only show server selection when:
 			// 1. user_choice_multiple - User has enabled dedicated server checkbox AND there are multiple servers
-			// 2. dedicated_only_multiple - bench group has multiple dedicated servers linked to it and none public
+			// 2. dedicated_only_multiple - release group has multiple dedicated servers linked to it and none public
 			if (!this.useDedicatedServer || !hasMultipleServers) {
 				return false;
 			}
@@ -883,8 +880,12 @@ export default {
 				.sort((a, b) => a.label.localeCompare(b.label));
 		},
 		selectedPlan() {
-			if (!plans?.data) return;
-			return plans.data.find((p) => p.name === this.plan.name);
+			if (!plans?.data?.length) return;
+			return plans.data.find((p) => p.name === this.plan?.name);
+		},
+		selectedPlanHasSupportIncluded() {
+			if (!this.selectedPlan) return;
+			return this.selectedPlan.support_included;
 		},
 		versionAppsMap() {
 			const versions = this.availableVersions.map((v) => v.name);
@@ -908,7 +909,7 @@ export default {
 			if (this.bench) {
 				let group = getCachedDocumentResource('Release Group', this.bench);
 				return [
-					{ label: 'Bench Groups', route: '/groups' },
+					{ label: 'Benches', route: '/groups' },
 					{
 						label: group ? group.doc.title : this.bench,
 						route: {
@@ -961,7 +962,7 @@ export default {
 						this.selectedVersionApps.find((a) => a.app === app.app).app_title
 					} ${
 						app.plan?.price_inr
-							? `- <span class="text-gray-600">${this.$format.userCurrency(
+							? `- <span class="text-ink-gray-6">${this.$format.userCurrency(
 									this.$team.doc.currency == 'INR'
 										? app.plan.price_inr
 										: app.plan.price_usd,
@@ -1004,7 +1005,7 @@ export default {
 				},
 				{
 					label: 'Total',
-					value: `${this.totalPerMonth} per month <div class="text-gray-600">${this.totalPerDay} per day</div>`,
+					value: `${this.totalPerMonth} per month <div class="text-ink-gray-6">${this.totalPerDay} per day</div>`,
 					condition: () => this._totalPerMonth,
 				},
 			];
@@ -1017,6 +1018,17 @@ export default {
 			return this.availableVersions
 				.sort((a, b) => b.name.localeCompare(a.name))
 				.find((v) => !v.disabled)?.name;
+		},
+		applyDedicatedServerDefaults() {
+			const config = this.dedicatedServerConfig;
+			if (!config || !config.dedicated_servers) return;
+			if (config.case === 'dedicated_only_single') {
+				this.useDedicatedServer = true;
+				this.selectedDedicatedServer = this.server;
+			} else if (config.case === 'dedicated_only_multiple') {
+				// Multiple servers, none public - user must choose
+				this.useDedicatedServer = true;
+			}
 		},
 	},
 };

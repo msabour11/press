@@ -3,7 +3,7 @@ import {
 	createResource,
 	LoadingIndicator,
 } from 'frappe-ui';
-import LucideVenetianMask from '~icons/lucide/venetian-mask';
+import ArrowLeftRightIcon from '~icons/lucide/arrow-left-right';
 import { defineAsyncComponent, h } from 'vue';
 import { unparse } from 'papaparse';
 import { toast } from 'vue-sonner';
@@ -110,7 +110,7 @@ export default {
 				},
 				{
 					type: 'link',
-					label: 'Bench Group',
+					label: 'Benches',
 					fieldname: 'group',
 					options: {
 						doctype: 'Release Group',
@@ -182,7 +182,7 @@ export default {
 				},
 			},
 			{
-				label: 'Bench Group',
+				label: 'Benches',
 				fieldname: 'group',
 				width: '15rem',
 				format(value, row) {
@@ -453,7 +453,7 @@ export default {
 													default: () => {
 														return h('pre', {
 															class:
-																'whitespace-pre-wrap text-sm rounded border-2 p-3 border-gray-200 bg-gray-100',
+																'whitespace-pre-wrap text-sm rounded border-2 p-3 border-outline-gray-1 bg-surface-gray-2',
 															innerHTML: site.doc.broken_domain_error,
 														});
 													},
@@ -781,22 +781,23 @@ export default {
 									site.doc?.host_name || site.doc?.name
 								}</b> that was created on ${date(backup.creation, 'llll')}.${
 									!backup.offsite
-										? '<br><br><div class="p-2 bg-gray-100 rounded border-gray-200">You have to be logged in as a <b>System Manager</b> <em>in your site</em> to download the backup.<div>'
+										? '<br><br><div class="p-2 bg-surface-gray-2 rounded border-outline-gray-1">You have to be logged in as a <b>System Manager</b> <em>in your site</em> to download the backup.<div>'
 										: ''
 								}`,
-								onSuccess() {
-									downloadBackup(backup, file);
+								onSuccess({ hide }) {
+									downloadBackup(backup, file, hide);
 								},
 							});
 						}
 
-						async function downloadBackup(backup, file) {
+						async function downloadBackup(backup, file, hide) {
 							// file: database, public, or private
 							if (backup.offsite) {
 								site.getBackupDownloadLink.submit(
 									{ backup: backup.name, file },
 									{
 										onSuccess(r) {
+											hide();
 											// TODO: fix this in documentResource, it should return message directly
 											if (r.message) {
 												window.open(r.message);
@@ -815,6 +816,7 @@ export default {
 									domainRegex,
 									`$1${site.doc.host_name}/`,
 								);
+								hide();
 								window.open(newUrl);
 							}
 						}
@@ -1067,7 +1069,7 @@ export default {
 
 						return getUpsellBanner(
 							site,
-							'Your site is currently on a shared bench group. Upgrade plan for offsite backups and <a href="https://frappecloud.com/shared-hosting#benches" class="underline" target="_blank">more</a>.',
+							'Your site is currently on a shared bench. Upgrade plan for offsite backups and <a href="https://frappecloud.com/shared-hosting#benches" class="underline" target="_blank">more</a>.',
 						);
 					},
 				},
@@ -1204,16 +1206,81 @@ export default {
 				},
 			},
 			{
-				label: 'Actions',
-				icon: icon('sliders'),
-				route: 'actions',
-				type: 'Component',
+				label: 'Migrations',
+				icon: icon(ArrowLeftRightIcon),
+				route: 'migrations',
+				type: 'list',
 				condition: (site) => {
 					return site.doc?.status !== 'Archived';
 				},
-				component: SiteActions,
-				props: (site) => {
-					return { site: site.doc?.name };
+				childrenRoutes: ['Site Migration'],
+				list: {
+					documentation:
+						'https://docs.frappe.io/cloud/site/site-migrations/introduction-to-site-migration',
+					doctype: 'Site Action',
+					filters: (site) => {
+						return { site: site.doc?.name };
+					},
+					orderBy: 'creation',
+					fields: ['action_type', 'status', 'scheduled_time', 'owner'],
+					columns: [
+						{
+							label: 'Migration',
+							fieldname: 'action_type',
+							width: 1,
+						},
+						{
+							label: 'Status',
+							fieldname: 'status',
+							type: 'Badge',
+							width: 0.6,
+						},
+						{
+							label: 'Created By',
+							fieldname: 'owner',
+						},
+						{
+							label: 'Scheduled At',
+							fieldname: 'scheduled_time',
+							format(value) {
+								return date(value, 'lll');
+							},
+						},
+						// {
+						// 	label: 'Updated On',
+						// 	fieldname: 'updated_on',
+						// 	format(value) {
+						// 		return date(value, 'lll');
+						// 	},
+						// },
+					],
+					route(row) {
+						return {
+							name: 'Site Migration',
+							params: { id: row.name },
+						};
+					},
+					primaryAction({ listResource: backups, documentResource: site }) {
+						return {
+							label: 'Trigger Migration',
+							slots: {
+								prefix: icon('upload-cloud'),
+							},
+							loading: site.backup.loading,
+							onClick() {
+								renderDialog(
+									h(
+										defineAsyncComponent(
+											() => import('../components/site/SiteMigration.vue'),
+										),
+										{
+											site: site.name,
+										},
+									),
+								);
+							},
+						};
+					},
 				},
 			},
 			{
@@ -1493,12 +1560,26 @@ export default {
 					},
 					banner({ documentResource: site }) {
 						const bannerTitle =
-							'Your site is currently on a shared bench group. Upgrade to a private bench group to configure auto updates and <a href="https://frappecloud.com/shared-hosting#benches" class="underline" target="_blank">more</a>.';
+							'Your site is currently on a shared bench. Upgrade to a private bench to configure auto updates and <a href="https://frappecloud.com/shared-hosting#benches" class="underline" target="_blank">more</a>.';
 
 						return getUpsellBanner(site, bannerTitle);
 					},
 				},
 			},
+			{
+				label: 'Actions',
+				icon: icon('sliders'),
+				route: 'actions',
+				type: 'Component',
+				condition: (site) => {
+					return site.doc?.status !== 'Archived';
+				},
+				component: SiteActions,
+				props: (site) => {
+					return { site: site.doc?.name };
+				},
+			},
+
 			{
 				label: 'Activity',
 				icon: icon('activity'),
@@ -1535,7 +1616,7 @@ export default {
 						{
 							label: 'Description',
 							fieldname: 'reason',
-							class: 'text-gray-600',
+							class: 'text-ink-gray-6',
 						},
 						{
 							label: '',
@@ -1660,7 +1741,14 @@ export default {
 					label: 'Impersonate Site Owner',
 					title: 'Impersonate Site Owner', // for label to pop-up on hover
 					slots: {
-						icon: icon(LucideVenetianMask),
+						icon: defineAsyncComponent(async () => {
+							const mod = await import('~icons/lucide/venetian-mask');
+							return {
+								render() {
+									return h(mod.default, { class: 'w-5 h-5' });
+								},
+							};
+						}),
 					},
 					condition: () =>
 						$team.doc?.is_desk_user && site.doc.team !== $team.name,
@@ -1768,6 +1856,11 @@ export default {
 			name: 'Site Update',
 			path: 'updates/:id',
 			component: () => import('../pages/SiteUpdate.vue'),
+		},
+		{
+			name: 'Site Migration',
+			path: 'migrations/:id',
+			component: () => import('../pages/SiteMigration.vue'),
 		},
 	],
 };

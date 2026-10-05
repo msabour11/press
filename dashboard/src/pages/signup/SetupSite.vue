@@ -2,7 +2,7 @@
 	<div class="flex h-screen overflow-hidden">
 		<div class="w-full overflow-auto">
 			<LoginBox
-				:title="'Let\'s set up your site'"
+				title="Let's set up your site"
 				subtitle="Enter site name to set up your site"
 			>
 				<template v-slot:logo v-if="saasProduct">
@@ -20,7 +20,7 @@
 							<Tooltip
 								text="You will be able to access your site via your site name"
 							>
-								<lucide-info class="h-4 w-4 text-gray-500" />
+								<lucide-info class="h-4 w-4 text-ink-gray-5" />
 							</Tooltip>
 						</div>
 						<div class="col-span-2 flex w-full">
@@ -32,9 +32,10 @@
 								"
 								v-model="subdomain"
 								data-record="true"
+								ref="subdomainInput"
 							/>
 							<div
-								class="flex cursor-default items-center rounded-r bg-gray-100 px-2 text-base"
+								class="flex cursor-default items-center rounded-r bg-surface-gray-2 px-2 text-base"
 							>
 								.{{ domain }}
 							</div>
@@ -162,6 +163,9 @@ export default {
 		},
 	},
 	mounted() {
+		this.$nextTick(() => {
+			this.$refs.subdomainInput?.focus();
+		});
 		this.email = localStorage.getItem('login_email');
 		if (window.posthog?.__loaded) {
 			window.posthog.identify(this.email || window.posthog.get_distinct_id(), {

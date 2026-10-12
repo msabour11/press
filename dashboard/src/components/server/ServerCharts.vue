@@ -21,7 +21,7 @@
 				<DateTimePicker
 					class="w-52"
 					type="datetime"
-					format="hh:mm a, D MMM YYYY"
+					format="D MMM YYYY, hh:mm a"
 					:model-value="customStartTime"
 					@update:model-value="customStartTime = new Date($event)"
 				/>
@@ -31,7 +31,7 @@
 				<DateTimePicker
 					class="w-52"
 					type="datetime"
-					format="hh:mm a, D MMM YYYY"
+					format="D MMM YYYY, hh:mm a"
 					:model-value="customEndTime"
 					@update:model-value="customEndTime = new Date($event)"
 				/>
@@ -146,7 +146,7 @@
 					title="Disk I/O"
 					:key="iopsData"
 					:data="iopsData"
-					unit="I0ps"
+					unit="IOps"
 					:chartTheme="[$theme.colors.purple[500], $theme.colors.blue[500]]"
 					:loading="$resources.iops.loading"
 					:error="$resources.iops.error"
@@ -161,7 +161,7 @@
 		>
 			<h2 class="text-lg font-semibold">Advanced Analytics</h2>
 			<FeatherIcon
-				class="h-5 w-5 text-gray-500 hover:text-gray-700"
+				class="h-5 w-5 text-ink-gray-5 hover:text-ink-gray-7"
 				:name="showAdvancedAnalytics ? 'chevron-down' : 'chevron-right'"
 			/>
 		</div>
@@ -343,7 +343,7 @@
 				/>
 				<template #action>
 					<router-link
-						class="text-base text-gray-600 hover:text-gray-700"
+						class="text-base text-ink-gray-6 hover:text-ink-gray-7"
 						:to="{
 							name: 'Server Detail Actions',
 							params: { name: this.serverName },
@@ -372,7 +372,7 @@
 				/>
 				<template #action>
 					<router-link
-						class="text-base text-gray-600 hover:text-gray-700"
+						class="text-base text-ink-gray-6 hover:text-ink-gray-7"
 						:to="{
 							name: 'Server Detail Actions',
 							params: { name: this.serverName },
@@ -443,7 +443,7 @@ import {
 import LineChart from '@/components/charts/LineChart.vue';
 import BarChart from '@/components/charts/BarChart.vue';
 import AnalyticsCard from '../site/AnalyticsCard.vue';
-import dayjs from '../../utils/dayjs';
+import dayjs, { dayjsFloorToMinutes } from '../../utils/dayjs';
 import { duration } from '../../utils/format';
 
 export default {
@@ -501,12 +501,14 @@ export default {
 		},
 		duration() {
 			const now = dayjs();
-			this.customEndTime = now.toDate();
+			// floor to 15 minutes to avoid issues with caching
+			const flooredEndDate = dayjsFloorToMinutes(now, 15);
+			this.customEndTime = flooredEndDate.toDate();
 			const dur =
 				this.duration === 'custom'
 					? this.defaultDurationToArray
 					: this.inputDurationToArray;
-			this.customStartTime = now.subtract(...dur).toDate();
+			this.customStartTime = flooredEndDate.subtract(...dur).toDate();
 		},
 	},
 	resources: {
@@ -703,6 +705,9 @@ export default {
 					query: 'database_uptime',
 					start: this.startTime,
 					end: this.endTime,
+					server_type: this.serverOptions.find(
+						(s) => s.value === this.chosenServer,
+					)?.label,
 				},
 				auto:
 					this.isServerType('Database Server') ||
@@ -718,6 +723,9 @@ export default {
 					query: 'database_commands_count',
 					start: this.startTime,
 					end: this.endTime,
+					server_type: this.serverOptions.find(
+						(s) => s.value === this.chosenServer,
+					)?.label,
 				},
 				auto:
 					this.showAdvancedAnalytics &&
@@ -734,6 +742,9 @@ export default {
 					query: 'database_connections',
 					start: this.startTime,
 					end: this.endTime,
+					server_type: this.serverOptions.find(
+						(s) => s.value === this.chosenServer,
+					)?.label,
 				},
 				auto:
 					this.showAdvancedAnalytics &&
@@ -750,6 +761,9 @@ export default {
 					query: 'innodb_bp_size',
 					start: this.startTime,
 					end: this.endTime,
+					server_type: this.serverOptions.find(
+						(s) => s.value === this.chosenServer,
+					)?.label,
 				},
 				auto:
 					this.showAdvancedAnalytics &&
@@ -766,6 +780,9 @@ export default {
 					query: 'innodb_bp_size_of_total_ram',
 					start: this.startTime,
 					end: this.endTime,
+					server_type: this.serverOptions.find(
+						(s) => s.value === this.chosenServer,
+					)?.label,
 				},
 				auto:
 					this.showAdvancedAnalytics &&
@@ -782,6 +799,9 @@ export default {
 					query: 'innodb_bp_miss_percent',
 					start: this.startTime,
 					end: this.endTime,
+					server_type: this.serverOptions.find(
+						(s) => s.value === this.chosenServer,
+					)?.label,
 				},
 				auto:
 					this.showAdvancedAnalytics &&
@@ -798,6 +818,9 @@ export default {
 					query: 'innodb_avg_row_lock_time',
 					start: this.startTime,
 					end: this.endTime,
+					server_type: this.serverOptions.find(
+						(s) => s.value === this.chosenServer,
+					)?.label,
 				},
 				auto:
 					this.showAdvancedAnalytics &&
@@ -859,8 +882,10 @@ export default {
 			if (this.duration === 'custom') {
 				return this.customEndTime;
 			}
-			const now = dayjs().toDate();
-			return now;
+			const now = dayjs();
+			// floor to 15 minutes to avoid issues with caching
+			const flooredNow = dayjsFloorToMinutes(now, 15);
+			return flooredNow.toDate();
 		},
 		loadAverageData() {
 			let loadavg = this.$resources.loadavg.data;

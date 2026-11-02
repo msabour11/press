@@ -45,7 +45,7 @@ def create_dns_record(doc, record_name=None):
 		# Check if the cluster has multiple proxy servers
 		proxy_servers = frappe.get_all(
 			"Proxy Server",
-			{"cluster": doc.cluster, "status": "Active"},
+			{"cluster": doc.cluster, "status": "Active", "exclude_from_auto_selection": 0},
 			pluck="name",
 		)
 		if len(proxy_servers) == 1 or (
@@ -83,20 +83,17 @@ def _change_dns_record(method: str, domain: RootDomain, proxy_server: str, recor
 	try:
 		zones = client.list_hosted_zones_by_name()["HostedZones"]
 		hosted_zone = find(reversed(zones), lambda x: domain.name.endswith(x["Name"][:-1]))["Id"]
+		record = {
+			"Name": record_name,
+			"Type": "CNAME",
+			"TTL": 600,
+			"ResourceRecords": [{"Value": proxy_server}],
+		}
+		if method == "DELETE" and record_name:
+			# Route 53 deletes only on an exact match, and older records have other TTLs
+			record = _find_cname_record(client, hosted_zone, record_name, proxy_server) or record
 		client.change_resource_record_sets(
-			ChangeBatch={
-				"Changes": [
-					{
-						"Action": method,
-						"ResourceRecordSet": {
-							"Name": record_name,
-							"Type": "CNAME",
-							"TTL": 600,
-							"ResourceRecords": [{"Value": proxy_server}],
-						},
-					}
-				]
-			},
+			ChangeBatch={"Changes": [{"Action": method, "ResourceRecordSet": record}]},
 			HostedZoneId=hosted_zone,
 		)
 	except client.exceptions.InvalidChangeBatch as e:
@@ -120,13 +117,31 @@ def _change_dns_record(method: str, domain: RootDomain, proxy_server: str, recor
 		)
 
 
+def _find_cname_record(client, hosted_zone: str, record_name: str, target: str) -> dict | None:
+	"""Return the CNAME record set for `record_name` as Route 53 has it, if it points at `target`."""
+	records = client.list_resource_record_sets(
+		HostedZoneId=hosted_zone, StartRecordName=record_name, StartRecordType="CNAME", MaxItems="1"
+	)["ResourceRecordSets"]
+	if not records:
+		return None
+	record = records[0]
+	values = [value["Value"].rstrip(".") for value in record.get("ResourceRecords", [])]
+	if (
+		record["Name"].rstrip(".") == record_name.rstrip(".")
+		and record["Type"] == "CNAME"
+		and values == [target.rstrip(".")]
+	):
+		return record
+	return None
+
+
 def get_dns_provider_mname_rname(domain):
 	from tldextract import extract
 
 	resolver = Resolver(configure=False)
 	resolver.nameservers = NAMESERVERS
 	try:
-		answer = resolver.query(domain, SOA)
+		answer = resolver.resolve(domain, SOA)
 		if len(answer) > 0:
 			mname = answer[0].mname.to_text()
 			rname = answer[0].rname.to_text()
@@ -145,7 +160,7 @@ def accessible_link_substr(provider: str):
 	except requests.RequestException:
 		return None
 	else:
-		return f'<a class=underline href="http://{provider}" target="_blank">{provider}</a>'
+		return f'<a class="underline" href="http://{provider}" target="_blank">{provider}</a>'
 
 
 @redis_cache()
@@ -162,7 +177,7 @@ def throw_for_caa_record(domain):
 	resolver = Resolver(configure=False)
 	resolver.nameservers = NAMESERVERS
 	try:
-		answer = resolver.query(domain, CAA)
+		answer = resolver.resolve(domain, CAA)
 		for rdata in answer:
 			if "letsencrypt.org" in rdata.to_text():
 				return True
@@ -193,7 +208,7 @@ def check_dns_cname(name, domain):
 	try:
 		resolver = Resolver(configure=False)
 		resolver.nameservers = NAMESERVERS
-		answer = resolver.query(domain, CNAME)
+		answer = resolver.resolve(domain, CNAME)
 		if len(answer) > 1:
 			raise MultipleCNAMERecords
 		mapped_domain = answer[0].to_text().rsplit(".", 1)[0]
@@ -224,16 +239,21 @@ def check_for_ip_match(site_name: str, site_ip: str | None, domain_ip: str | Non
 	if domain_ip == site_ip:
 		return True
 	if site_ip:
-		# We can issue certificates even if the domain points to the secondary proxies
-		server = frappe.db.get_value("Site", site_name, "server")
+		# We can issue certificates even if the domain points to the secondary or failed over proxies
+		server, cluster = frappe.db.get_value("Site", site_name, ["server", "cluster"])
 		proxy = frappe.db.get_value("Server", server, "proxy_server")
+		proxy_ip = frappe.db.get_value("Proxy Server", proxy, "ip")
 		secondary_ips = frappe.get_all(
 			"Proxy Server",
 			{"status": "Active", "primary": proxy, "is_replication_setup": True},
 			pluck="ip",
 		)
-		if domain_ip in secondary_ips:
-			return True
+		failed_over_ips = frappe.get_all(
+			"Proxy Server",
+			{"status": "Active", "cluster": cluster, "is_primary": True, "exclude_from_auto_selection": True},
+			pluck="ip",
+		)
+		return domain_ip in [*secondary_ips, proxy_ip, *failed_over_ips]
 	return False
 
 
@@ -242,11 +262,11 @@ def check_dns_a(name, domain):
 	try:
 		resolver = Resolver(configure=False)
 		resolver.nameservers = NAMESERVERS
-		answer = resolver.query(domain, A)
+		answer = resolver.resolve(domain, A)
 		if len(answer) > 1:
 			raise MultipleARecords
 		domain_ip = answer[0].to_text()
-		site_ip = resolver.query(name, A)[0].to_text()
+		site_ip = resolver.resolve(name, A)[0].to_text()
 		result["answer"] = answer.rrset.to_text()
 		result["matched"] = check_for_ip_match(name, site_ip, domain_ip)
 	except MultipleARecords:
@@ -276,7 +296,7 @@ def ensure_dns_aaaa_record_doesnt_exist(domain: str):
 	try:
 		resolver = Resolver(configure=False)
 		resolver.nameservers = NAMESERVERS
-		answer = resolver.query(domain, AAAA)
+		answer = resolver.resolve(domain, AAAA)
 		if answer:
 			frappe.throw(
 				f"Domain {domain} has an AAAA record. This causes issues with https certificate generation. Please remove the same{get_dns_provider_link_substr(domain)}.",
@@ -316,16 +336,14 @@ def _check_dns_cname_a(name, domain, ignore_proxying=False):
 
 	if cname["matched"] and a["exists"] and not a["matched"]:
 		frappe.throw(
-			f"""
-			Domain <b>{domain}</b> has correct CNAME record <b>{cname["answer"].strip().split()[-1]}</b>, but also an A record that points to an incorrect IP address <b>{a["answer"].strip().split()[-1]}</b>.
+			f"""Domain <b>{domain}</b> has correct CNAME record <b>{cname["answer"].strip().split()[-1]}</b>, but also an A record that points to an incorrect IP address <b>{a["answer"].strip().split()[-1]}</b>.
 			<br>Please remove or update the <b>A</b> record{get_dns_provider_link_substr(domain)}.
 			""",
 			ConflictingDNSRecord,
 		)
 	if a["matched"] and cname["exists"] and not cname["matched"]:
 		frappe.throw(
-			f"""
-			Domain <b>{domain}</b> has correct A record <b>{a["answer"].strip().split()[-1]}</b>, but also a CNAME record that points to an incorrect domain <b>{cname["answer"].strip().split()[-1]}</b>.
+			f"""Domain <b>{domain}</b> has correct A record <b>{a["answer"].strip().split()[-1]}</b>, but also a CNAME record that points to an incorrect domain <b>{cname["answer"].strip().split()[-1]}</b>.
 			<br>Please remove or update the <b>CNAME</b> record{get_dns_provider_link_substr(domain)}.
 			""",
 			ConflictingDNSRecord,
@@ -336,7 +354,7 @@ def _check_dns_cname_a(name, domain, ignore_proxying=False):
 		if ignore_proxying:  # no point checking the rest if proxied
 			return {"CNAME": {}, "A": {}, "matched": True, "type": "A"}  # assume A
 		frappe.throw(
-			f"""Domain <b>{domain}</b> appears to be proxied (server: <b>{proxy}</b>). Please turn off proxying{get_dns_provider_link_substr(domain)} and try again in some time.
+			f"""Domain <b>{domain}</b> appears to be proxied (server: <b>{proxy}</b>). Please <a class='underline' href="https://docs.frappe.io/cloud/sites/custom-domains#dns-verification-failed-even-after-adding-dns-record-on-cloudflare">turn off proxying</a>{get_dns_provider_link_substr(domain)} and try again in some time.
 			<br>You may enable it once the domain is verified.""",
 			DomainProxied,
 		)

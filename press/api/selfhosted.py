@@ -50,7 +50,7 @@ def create_self_hosted_server(server_details, team, proxy_server):
 
 def validate_team(team):
 	if not team:
-		frappe.throw("You must be part of a team to create a new server")
+		frappe.throw("You must belong to a team to create a new server. Please create or join a team first.")
 
 	if not team.enabled:
 		frappe.throw("You cannot create a new server because your account is disabled")
@@ -79,6 +79,10 @@ def sshkey():
 @frappe.whitelist()
 def verify(server):
 	server_doc = frappe.get_doc("Self Hosted Server", server)
+	current_team = get_current_team()
+
+	if server_doc.team != current_team:
+		frappe.throw("Not permitted to access this server", frappe.PermissionError)
 
 	app_server_verified = verify_server("app", server_doc)
 	db_server_verified = verify_server("db", server_doc)
@@ -128,6 +132,11 @@ def verify_server(server_type, server_doc):
 @frappe.whitelist()
 def setup(server):
 	server_doc = frappe.get_doc("Self Hosted Server", server)
+	current_team = get_current_team()
+
+	if server_doc.team != current_team:
+		frappe.throw("Not permitted to access this server", frappe.PermissionError)
+
 	server_doc.start_setup = True
 	server_doc.save()
 	server_doc.setup_server()
@@ -144,7 +153,7 @@ def check_dns(domain, ip):
 	try:
 		resolver = Resolver(configure=False)
 		resolver.nameservers = NAMESERVERS
-		domain_ip = resolver.query(domain.strip(), "A")[0].to_text()
+		domain_ip = resolver.resolve(domain.strip(), "A")[0].to_text()
 		if domain_ip == ip:
 			return True
 	except Exception:
